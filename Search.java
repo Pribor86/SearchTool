@@ -7,9 +7,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 public class Search {
     private final Map<String, String> values = new HashMap<>();
+    private boolean readyToSave = true;
 
     public Map<String, String> getValues() {
         return values;
@@ -34,6 +36,28 @@ public class Search {
         }
     }
 
+    public Predicate<Path> searchType(String type, String inputSearch) {
+        Pattern pattern;
+        switch (type) {
+            case ("name"):
+                return p -> p.toFile().getName().contains(inputSearch);
+            case ("mask"):
+                pattern = Pattern.compile(("^" + inputSearch + "$")
+                        .replace(".", "\\.")
+                        .replace("?", ".")
+                        .replace("*", ".*")
+                );
+                return p -> pattern.matcher(p.toFile().getName()).find();
+            case ("regex"):
+                pattern = Pattern.compile(inputSearch);
+                return p -> pattern.matcher(p.toFile().getName()).find();
+            default:
+                System.out.println("Search type is wrong");
+                readyToSave = false;
+                return null;
+        }
+    }
+
     private void argsParser(String[] args) {
         if (args.length > 0) {
             for (String ar : args) {
@@ -48,10 +72,10 @@ public class Search {
     }
 
     public boolean argsVerification(String[] args) {
-        boolean isDir = false;
-        boolean isName = false;
-        boolean isType = false;
-        boolean isLogPath = false;
+        boolean isDir;
+        boolean isName;
+        boolean isType;
+        boolean isLogPath;
         argsParser(args);
         isDir = values.containsKey("d");
         isName = values.containsKey("n");
@@ -66,7 +90,7 @@ public class Search {
             //Name(by mask) validator
             if (values.get("t").equals("mask")) {
                 String nValue = values.get("n");
-                if (!nValue.startsWith("*") && !nValue.endsWith("*")) {
+                if (!nValue.contains("*") && !nValue.contains("?")) {
                     isName = false;
                 }
             }
@@ -92,7 +116,9 @@ public class Search {
                 }
                 if (!isName) {
                     System.out.println("Incorrect mask template. "
-                            + "\nPlease use \"*.txt\" or \"whatever.*\" template");
+                            + "\nUse special symbols"
+                    + "\n ? - replaces single character"
+                    + "\n * - replaces multiple characters");
                 }
                 if (!isType) {
                     System.out.println("Wrong type format."
@@ -120,5 +146,9 @@ public class Search {
             }
         }
         return false;
+    }
+
+    public boolean isReadyToSave() {
+        return readyToSave;
     }
 }
